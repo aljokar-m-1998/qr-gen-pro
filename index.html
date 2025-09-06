@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>مولّد QR احترافي (ملف واحد)</title>
+  <style>
+    :root{
+      --bg:#0f172a;
+      --card:#111827;
+      --text:#e5e7eb;
+      --muted:#94a3b8;
+      --accent:#22c55e;
+      --accent-2:#3b82f6;
+      --border:#1f2937;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial;
+      background:linear-gradient(120deg,#0b1220,#0f172a);
+      color:var(--text); min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px;
+    }
+    .app{
+      width:100%; max-width:980px; display:grid; grid-template-columns:1fr 1fr; gap:20px;
+    }
+    @media (max-width:900px){ .app{grid-template-columns:1fr} }
+    .card{
+      background:radial-gradient(1200px 400px at -10% -50%, rgba(59,130,246,0.08), transparent 60%),
+                 radial-gradient(1000px 500px at 120% 120%, rgba(34,197,94,0.08), transparent 60%),
+                 var(--card);
+      border:1px solid var(--border); border-radius:16px; padding:18px 16px 16px; backdrop-filter: blur(4px);
+      box-shadow:0 10px 30px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.04);
+    }
+    .title{font-weight:700; margin:0 0 8px; letter-spacing:.3px}
+    .muted{color:var(--muted); font-size:14px; margin:0 0 14px}
+    .row{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
+    label{font-size:13px; color:var(--muted)}
+    input[type="text"]{
+      width:100%; padding:12px 14px; background:#0b1020; color:var(--text);
+      border:1px solid var(--border); border-radius:10px; outline:none;
+    }
+    input[type="text"]::placeholder{color:#6b7280}
+    .grid{display:grid; grid-template-columns:repeat(2,1fr); gap:12px}
+    @media (max-width:600px){ .grid{grid-template-columns:1fr} }
+    .field{display:flex; flex-direction:column; gap:6px}
+    select, input[type="number"], input[type="file"], input[type="color"]{
+      background:#0b1020; color:var(--text); border:1px solid var(--border);
+      border-radius:10px; padding:10px 12px; width:100%; outline:none;
+    }
+    input[type="range"]{ width:100% }
+    .btns{display:flex; gap:10px; flex-wrap:wrap}
+    button{
+      border:0; border-radius:10px; padding:10px 14px; cursor:pointer; color:white; font-weight:600;
+      background:linear-gradient(135deg,var(--accent),#16a34a); box-shadow:0 6px 16px rgba(34,197,94,0.35);
+    }
+    button.secondary{ background:linear-gradient(135deg,var(--accent-2),#1d4ed8); box-shadow:0 6px 16px rgba(59,130,246,0.35) }
+    button.ghost{ background:#0b1020; border:1px solid var(--border); color:#cbd5e1; box-shadow:none }
+    .preview{
+      display:flex; align-items:center; justify-content:center; background:#0b1020; border:1px dashed #233;
+      border-radius:16px; min-height:420px; position:relative; overflow:hidden;
+    }
+    canvas{ image-rendering:pixelated; border-radius:12px; }
+    .note{font-size:12px; color:#9ca3af}
+    .footer{margin-top:10px; display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap}
+    .badge{background:#0b1020; border:1px solid var(--border); padding:6px 10px; border-radius:999px; font-size:12px; color:#cbd5e1}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <!-- التحكم -->
+    <section class="card">
+      <h2 class="title">مولّد QR احترافي</h2>
+      <p class="muted">حوّل أي نص أو رابط إلى QR مع تحكم كامل في الألوان والحجم، وإضافة لوجو وحفظ كصورة PNG.</p>
+
+      <div class="field" style="margin-bottom:10px">
+        <label>النص / الرابط</label>
+        <input id="text" type="text" placeholder="مثال: https://example.com أو أي نص..." />
+      </div>
+
+      <div class="grid" style="margin-bottom:6px">
+        <div class="field">
+          <label>المقاس: <span id="sizeLabel">256</span> بكسل</label>
+          <input id="size" type="range" min="128" max="768" step="64" value="256" />
+        </div>
+        <div class="field">
+          <label>مستوى التصحيح (ECC)</label>
+          <select id="ecc">
+            <option value="L">L (أقل تصحيح – أعلى كثافة)</option>
+            <option value="M" selected>M (قياسي)</option>
+            <option value="Q">Q (عالي)</option>
+            <option value="H">H (الأعلى)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="grid" style="margin-bottom:6px">
+        <div class="field">
+          <label>لون الكود</label>
+          <input id="fg" type="color" value="#000000" />
+        </div>
+        <div class="field">
+          <label>لون الخلفية</label>
+          <input id="bg" type="color" value="#ffffff" />
+        </div>
+      </div>
+
+      <div class="grid" style="margin-bottom:14px">
+        <div class="field">
+          <label>رفع لوجو (اختياري, PNG شفاف أفضل) <span class="note">سيظهر في المنتصف</span></label>
+          <input id="logo" type="file" accept="image/*" />
+        </div>
+        <div class="field">
+          <label>حجم اللوجو نسبةً للمقاس: <span id="logoSizeLabel">20%</span></label>
+          <input id="logoSize" type="range" min="10" max="35" step="1" value="20" />
+        </div>
+      </div>
+
+      <div class="btns">
+        <button id="generateBtn">توليد الكود</button>
+        <button id="downloadBtn" class="secondary" disabled>حفظ كصورة PNG</button>
+        <button id="clearBtn" class="ghost">مسح</button>
+      </div>
+
+      <div class="footer">
+        <span class="badge">محلي 100% — بدون سيرفر</span>
+        <span class="note">نصيحة: مستوى H يساعد مع وجود لوجو، لكنه يكبّر وحدات الكود.</span>
+      </div>
+    </section>
+
+    <!-- المعاينة -->
+    <section class="card">
+      <h3 class="title">المعاينة المباشرة</h3>
+      <div class="preview">
+        <canvas id="preview" width="256" height="256"></canvas>
+      </div>
+      <p class="muted" style="margin-top:10px">بعد الضغط على “توليد الكود” يمكنك حفظ الصورة PNG بجودة عالية. التغيير في الإعدادات يتطلّب إعادة التوليد.</p>
+    </section>
+  </div>
+
+  <!-- مكتبة توليد QR -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script>
+    // عناصر الواجهة
+    const textEl = document.getElementById('text');
+    const sizeEl = document.getElementById('size');
+    const sizeLabel = document.getElementById('sizeLabel');
+    const eccEl = document.getElementById('ecc');
+    const fgEl = document.getElementById('fg');
+    const bgEl = document.getElementById('bg');
+    const logoEl = document.getElementById('logo');
+    const logoSizeEl = document.getElementById('logoSize');
+    const logoSizeLabel = document.getElementById('logoSizeLabel');
+
+    const generateBtn = document.getElementById('generateBtn');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const clearBtn = document.getElementById('clearBtn');
+
+    const previewCanvas = document.getElementById('preview');
+    const pctx = previewCanvas.getContext('2d');
+
+    // حاوية خفية لتوليد QR من المكتبة ثم نركّبه
+    const hiddenBox = document.createElement('div');
+    hiddenBox.style.position = 'fixed';
+    hiddenBox.style.left = '-9999px';
+    document.body.appendChild(hiddenBox);
+
+    // تحديث الملصقات
+    sizeEl.addEventListener('input', () => sizeLabel.textContent = sizeEl.value);
+    logoSizeEl.addEventListener('input', () => logoSizeLabel.textContent = logoSizeEl.value + '%');
+
+    // تحويل اختيار ECC إلى قيمة المكتبة
+    function mapECC(v){
+      const L = QRCode.CorrectLevel.L;
+      const M = QRCode.CorrectLevel.M;
+      const Q = QRCode.CorrectLevel.Q;
+      const H = QRCode.CorrectLevel.H;
+      return ({L, M, Q, H})[v] || M;
+    }
+
+    // قراءة صورة اللوجو ككائن HTMLImage
+    function readLogoFile(file){
+      return new Promise((resolve, reject) => {
+        if(!file){ resolve(null); return; }
+        const reader = new FileReader();
+        reader.onload = e => {
+          const img = new Image();
+          img.onload = () => resolve(img);
+          img.onerror = reject;
+          img.src = e.target.result;
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    // رسم مربع خلف اللوجو لزيادة الوضوح
+    function drawRoundedRect(ctx, x, y, w, h, r){
+      const rr = Math.min(r, w/2, h/2);
+      ctx.beginPath();
+      ctx.moveTo(x+rr, y);
+      ctx.arcTo(x+w, y, x+w, y+h, rr);
+      ctx.arcTo(x+w, y+h, x, y+h, rr);
+      ctx.arcTo(x, y+h, x, y, rr);
+      ctx.arcTo(x, y, x+w, y, rr);
+      ctx.closePath();
+    }
+
+    // توليد ثم تركيب (ألوان + لوجو) على كانفاس العرض
+    async function generate(){
+      const text = (textEl.value || '').trim();
+      if(!text){ alert('من فضلك أدخل نصًا أو رابطًا.'); return; }
+
+      const size = parseInt(sizeEl.value, 10);
+      const ecc = mapECC(eccEl.value);
+      const colorDark = fgEl.value || '#000000';
+      const colorLight = bgEl.value || '#ffffff';
+      const logoFile = logoEl.files && logoEl.files[0] ? logoEl.files[0] : null;
+      const logoImg = await readLogoFile(logoFile);
+      const logoRatio = parseInt(logoSizeEl.value,10) / 100; // نسبة من حجم الكود
+
+      // تفريغ الحاوية الخفية
+      hiddenBox.innerHTML = '';
+      // توليد QR من المكتبة على حاوية خفية
+      const temp = document.createElement('div');
+      hiddenBox.appendChild(temp);
+
+      const qr = new QRCode(temp, {
+        text, width: size, height: size,
+        colorDark, colorLight,
+        correctLevel: ecc
+      });
+
+      // الحصول على عنصر الكانفاس الناتج (أو IMG)
+      // تُنشيء المكتبة <canvas> أو <img>؛ نفضل الكانفاس
+      let qrCanvas = temp.querySelector('canvas');
+      if(!qrCanvas){
+        const img = temp.querySelector('img');
+        if(!img){ throw new Error('فشل التوليد'); }
+        // إن وُجد IMG نحوله إلى كانفاس
+        qrCanvas = document.createElement('canvas');
+        qrCanvas.width = size; qrCanvas.height = size;
+        const ictx = qrCanvas.getContext('2d');
+        ictx.drawImage(img,0,0,size,size);
+      }
+
+      // ضبط كانفاس المعاينة على الحجم المطلوب
+      previewCanvas.width = size;
+      previewCanvas.height = size;
+
+      // رسم الـ QR
+      pctx.clearRect(0,0,size,size);
+      pctx.drawImage(qrCanvas, 0, 0, size, size);
+
+      // تركيب اللوجو (اختياري)
+      if(logoImg){
+        const logoTargetSize = Math.max(24, Math.floor(size * logoRatio));
+        const lx = Math.floor((size - logoTargetSize)/2);
+        const ly = Math.floor((size - logoTargetSize)/2);
+
+        // خلفية مستديرة خلف اللوجو لتحسين التباين
+        const pad = Math.floor(logoTargetSize * 0.20);
+        pctx.save();
+        pctx.fillStyle = colorLight; // نفس لون الخلفية
+        drawRoundedRect(pctx, lx - pad, ly - pad, logoTargetSize + pad*2, logoTargetSize + pad*2, Math.max(6, pad));
+        pctx.fill();
+        pctx.restore();
+
+        // رسم اللوجو
+        pctx.drawImage(logoImg, lx, ly, logoTargetSize, logoTargetSize);
+      }
+
+      // تفعيل زر التحميل
+      downloadBtn.disabled = false;
+    }
+
+    // حفظ الصورة كـ PNG
+    function downloadPNG(){
+      const size = previewCanvas.width;
+      if(size === 0){ return; }
+      const url = previewCanvas.toDataURL('image/png');
+      const a = document.createElement('a');
+      // اسم ملف ذكي حسب النص
+      const raw = (textEl.value || 'qr-code').trim()
+        .replace(/https?:\/\/(www\.)?/i,'')
+        .replace(/[^a-zA-Z0-9_\-\.]+/g,'-')
+        .replace(/-+/g,'-')
+        .slice(0,40) || 'qr-code';
+      a.download = `${raw}.png`;
+      a.href = url;
+      a.click();
+    }
+
+    // مسح كل شيء
+    function clearAll(){
+      textEl.value = '';
+      logoEl.value = '';
+      previewCanvas.width = 256;
+      previewCanvas.height = 256;
+      pctx.clearRect(0,0,256,256);
+      downloadBtn.disabled = true;
+    }
+
+    // أحداث الأزرار
+    generateBtn.addEventListener('click', generate);
+    downloadBtn.addEventListener('click', downloadPNG);
+    clearBtn.addEventListener('click', clearAll);
+  </script>
+</body>
+</html>
